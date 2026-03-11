@@ -2,28 +2,56 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WASD 스네이크: 약육강식 시스템</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WASD 스네이크: 모바일 지원</title>
     <style>
-        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; overflow: hidden; font-family: 'Pretendard', sans-serif; color: white; }
-        canvas { background-color: #1e293b; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
-        .ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
-        .score { font-size: 24px; font-weight: bold; color: #fbbf24; }
-        .info { font-size: 14px; opacity: 0.8; margin-top: 5px; }
-        #gameOver { position: absolute; display: none; flex-direction: column; align-items: center; background: rgba(0,0,0,0.9); padding: 40px; border-radius: 20px; text-align: center; border: 2px solid #ef4444; z-index: 100; }
-        button { margin-top: 20px; padding: 12px 30px; font-size: 18px; cursor: pointer; background: #3b82f6; color: white; border: none; border-radius: 8px; }
+        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; overflow: hidden; font-family: 'Pretendard', sans-serif; color: white; touch-action: none; }
+        canvas { background-color: #1e293b; box-shadow: 0 0 50px rgba(0,0,0,0.5); width: 100%; height: 100%; }
+        .ui { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
+        .score { font-size: 20px; font-weight: bold; color: #fbbf24; }
+        .info { font-size: 12px; opacity: 0.8; margin-top: 5px; }
+        
+        /* 모바일 컨트롤러 스타일 */
+        .controls { 
+            position: absolute; bottom: 40px; right: 40px; 
+            display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(2, 60px); gap: 10px;
+            z-index: 20;
+        }
+        .btn {
+            width: 60px; height: 60px; background: rgba(255, 255, 255, 0.2); 
+            border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; font-weight: bold; color: white;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active { background: rgba(255, 255, 255, 0.5); transform: scale(0.9); }
+        .btn-up { grid-column: 2; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-down { grid-column: 2; grid-row: 2; }
+        .btn-right { grid-column: 3; grid-row: 2; }
+
+        #gameOver { position: absolute; display: none; flex-direction: column; align-items: center; background: rgba(0,0,0,0.9); padding: 30px; border-radius: 20px; text-align: center; border: 2px solid #ef4444; z-index: 100; width: 80%; max-width: 300px; }
+        button.restart { margin-top: 20px; padding: 12px 30px; font-size: 18px; cursor: pointer; background: #3b82f6; color: white; border: none; border-radius: 8px; }
     </style>
 </head>
 <body>
     <div class="ui">
         <div class="score">Score: <span id="scoreVal">0</span></div>
-        <div class="info">WASD 이동 | 나보다 작은 뱀은 몸통을 들이받아 먹을 수 있습니다!</div>
+        <div class="info">WASD 또는 화살표 터치로 조종하세요!</div>
+    </div>
+
+    <!-- 모바일 터치 컨트롤러 -->
+    <div class="controls">
+        <div class="btn btn-up" id="btnW">W</div>
+        <div class="btn btn-left" id="btnA">A</div>
+        <div class="btn btn-down" id="btnS">S</div>
+        <div class="btn btn-right" id="btnD">D</div>
     </div>
 
     <div id="gameOver">
         <h1 id="deathMsg">GAME OVER</h1>
         <p>최종 점수: <span id="finalScore">0</span></p>
-        <button onclick="resetGame()">다시 도전</button>
+        <button class="restart" onclick="resetGame()">다시 도전</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -36,8 +64,12 @@
         const gameOverScreen = document.getElementById('gameOver');
         const deathMsg = document.getElementById('deathMsg');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
         let score = 0;
         let gameActive = true;
@@ -49,21 +81,20 @@
                 this.isPlayer = isPlayer;
                 this.segments = [];
                 this.angle = Math.random() * Math.PI * 2;
-                this.speed = isPlayer ? 5 : 2 + Math.random() * 3;
-                this.baseRadius = isPlayer ? 15 : 8 + Math.random() * 20; // 다양한 크기의 적
-                this.length = isPlayer ? 15 : 10 + Math.random() * 20;
+                this.speed = isPlayer ? 4 : 2 + Math.random() * 2;
+                this.baseRadius = isPlayer ? 12 : 8 + Math.random() * 15;
+                this.length = isPlayer ? 15 : 10 + Math.random() * 15;
                 this.color = color;
-                this.turnSpeed = 0.08;
-                this.targetAngle = this.angle;
+                this.turnSpeed = 0.12;
 
                 for (let i = 0; i < this.length; i++) {
                     this.segments.push({ x: x, y: y });
                 }
             }
 
-            update(target) {
-                if (target !== undefined) {
-                    let angleDiff = target - this.angle;
+            update(targetAngle) {
+                if (targetAngle !== undefined) {
+                    let angleDiff = targetAngle - this.angle;
                     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
                     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                     this.angle += angleDiff * this.turnSpeed;
@@ -78,7 +109,6 @@
                     this.segments.pop();
                 }
 
-                // 화면 경계 처리
                 if (this.isPlayer) {
                     if (nextX < 0 || nextX > canvas.width || nextY < 0 || nextY > canvas.height) {
                         endGame("벽에 부딪혔습니다!");
@@ -102,14 +132,6 @@
                     ctx.arc(segment.x, segment.y, radius, 0, Math.PI * 2);
                     ctx.fillStyle = i === 0 ? (this.isPlayer ? "#fbbf24" : "#ef4444") : this.color;
                     ctx.fill();
-                    
-                    if (i === 0) {
-                        ctx.fillStyle = "white";
-                        ctx.beginPath();
-                        ctx.arc(segment.x + Math.cos(this.angle + 0.5) * (radius*0.5), segment.y + Math.sin(this.angle + 0.5) * (radius*0.5), radius/3, 0, Math.PI*2);
-                        ctx.arc(segment.x + Math.cos(this.angle - 0.5) * (radius*0.5), segment.y + Math.sin(this.angle - 0.5) * (radius*0.5), radius/3, 0, Math.PI*2);
-                        ctx.fill();
-                    }
                 }
             }
         }
@@ -117,64 +139,60 @@
         let player;
         let enemies = [];
         let foods = [];
-        let bombs = [];
 
         function initGame() {
             player = new Snake(canvas.width / 2, canvas.height / 2, "#10b981", true);
             enemies = [];
-            foods = Array.from({ length: 40 }, () => spawnItem('food'));
-            bombs = [spawnItem('bomb')];
+            foods = Array.from({ length: 30 }, () => spawnItem());
             score = 0;
             gameActive = true;
             gameOverScreen.style.display = 'none';
         }
 
-        function spawnItem(type) {
+        function spawnItem() {
             return {
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
-                radius: type === 'food' ? 5 + Math.random() * 5 : 15,
-                color: type === 'food' ? `hsl(${Math.random() * 360}, 70%, 60%)` : "#000",
-                type: type
+                radius: 5 + Math.random() * 5,
+                color: `hsl(${Math.random() * 360}, 70%, 60%)`
             };
         }
 
+        // 키보드 이벤트
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-        function checkCollision(head, targetSnake) {
-            // 타겟 뱀의 모든 마디와 충돌 체크 (머리부터 꼬리까지)
-            for (let i = 0; i < targetSnake.length; i++) {
-                const segIndex = i * 3;
-                if (segIndex >= targetSnake.segments.length) continue;
-                const seg = targetSnake.segments[segIndex];
-                const dist = Math.hypot(head.x - seg.x, head.y - seg.y);
-                
-                // 마디의 반지름을 고려한 충돌 판정
-                const targetRadius = targetSnake.baseRadius * (1 - (i / (targetSnake.length * 2)));
-                if (dist < player.baseRadius * 0.8 + targetRadius * 0.8) {
-                    return true;
-                }
-            }
-            return false;
-        }
+        // 터치 버튼 이벤트
+        const touchControls = { 'w': false, 'a': false, 's': false, 'd': false };
+        const setupBtn = (id, key) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); touchControls[key] = true; });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); touchControls[key] = false; });
+            el.addEventListener('mousedown', () => touchControls[key] = true);
+            el.addEventListener('mouseup', () => touchControls[key] = false);
+        };
+        setupBtn('btnW', 'w'); setupBtn('btnA', 'a'); setupBtn('btnS', 's'); setupBtn('btnD', 'd');
 
         function update() {
             if (!gameActive) return;
 
-            // 1. 플레이어 조작
             let targetAngle = player.angle;
-            if (keys['w'] && keys['a']) targetAngle = -Math.PI * 0.75;
-            else if (keys['w'] && keys['d']) targetAngle = -Math.PI * 0.25;
-            else if (keys['s'] && keys['a']) targetAngle = Math.PI * 0.75;
-            else if (keys['s'] && keys['d']) targetAngle = Math.PI * 0.25;
-            else if (keys['w']) targetAngle = -Math.PI / 2;
-            else if (keys['s']) targetAngle = Math.PI / 2;
-            else if (keys['a']) targetAngle = Math.PI;
-            else if (keys['d']) targetAngle = 0;
+            const w = keys['w'] || touchControls['w'];
+            const a = keys['a'] || touchControls['a'];
+            const s = keys['s'] || touchControls['s'];
+            const d = keys['d'] || touchControls['d'];
+
+            if (w && a) targetAngle = -Math.PI * 0.75;
+            else if (w && d) targetAngle = -Math.PI * 0.25;
+            else if (s && a) targetAngle = Math.PI * 0.75;
+            else if (s && d) targetAngle = Math.PI * 0.25;
+            else if (w) targetAngle = -Math.PI / 2;
+            else if (s) targetAngle = Math.PI / 2;
+            else if (a) targetAngle = Math.PI;
+            else if (d) targetAngle = 0;
+            
             player.update(targetAngle);
 
-            // 2. 적 AI 업데이트
             enemies.forEach(enemy => {
                 if (Math.random() < 0.02) enemy.targetAngle = Math.random() * Math.PI * 2;
                 enemy.update(enemy.targetAngle);
@@ -182,75 +200,33 @@
 
             const pHead = player.segments[0];
 
-            // 3. 플레이어 vs 적 상호작용 (전체 몸통 체크)
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                const enemy = enemies[i];
-                
-                // 플레이어 머리가 적의 몸통 어디든 닿았는가?
-                if (checkCollision(pHead, enemy)) {
-                    if (player.baseRadius > enemy.baseRadius) {
-                        // 플레이어가 더 크면 적을 먹음
-                        score += Math.floor(enemy.baseRadius * 10);
-                        player.length += enemy.length * 0.2;
-                        player.baseRadius += 1;
-                        enemies.splice(i, 1);
-                        continue;
-                    } else {
-                        // 플레이어가 더 작으면 사망
-                        endGame("더 거대한 적에게 먹혔습니다!");
-                        return;
-                    }
-                }
-
-                // 적의 머리가 플레이어의 몸통 어디든 닿았는가?
-                const eHead = enemy.segments[0];
-                if (Math.hypot(eHead.x - pHead.x, eHead.y - pHead.y) < enemy.baseRadius + player.baseRadius) {
-                   // 머리끼리 부딪힌 경우는 위에서 이미 처리됨 (checkCollision 내부에 머리 포함)
-                } else {
-                    // 적 머리가 플레이어 몸통(머리 제외)에 닿았는지 체크
-                    for (let j = 5; j < player.segments.length; j += 5) {
-                        const pSeg = player.segments[j];
-                        if (Math.hypot(eHead.x - pSeg.x, eHead.y - pSeg.y) < enemy.baseRadius + player.baseRadius * 0.5) {
-                            if (enemy.baseRadius > player.baseRadius) {
-                                endGame("적이 당신의 옆구리를 공격해 잡아먹었습니다!");
-                                return;
-                            } else {
-                                enemies.splice(i, 1);
-                                score += 50;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 4. 아이템 충돌
+            // 음식 먹기
             foods.forEach((food, i) => {
                 if (Math.hypot(pHead.x - food.x, pHead.y - food.y) < player.baseRadius + food.radius) {
-                    foods[i] = spawnItem('food');
+                    foods[i] = spawnItem();
                     score += 10;
-                    player.length += 1;
-                    player.baseRadius += 0.2;
+                    player.length += 0.5;
+                    player.baseRadius += 0.1;
                 }
             });
 
-            bombs.forEach((bomb, i) => {
-                if (Math.hypot(pHead.x - bomb.x, pHead.y - bomb.y) < player.baseRadius + bomb.radius) {
-                    enemies = [];
-                    bombs[i] = spawnItem('bomb');
-                    score += 100;
+            // 적 충돌
+            enemies.forEach((enemy, i) => {
+                const eHead = enemy.segments[0];
+                const dist = Math.hypot(pHead.x - eHead.x, pHead.y - eHead.y);
+                if (dist < player.baseRadius + enemy.baseRadius) {
+                    if (player.baseRadius > enemy.baseRadius) {
+                        enemies.splice(i, 1);
+                        score += 50;
+                        player.length += 2;
+                    } else {
+                        endGame("더 큰 뱀에게 먹혔습니다!");
+                    }
                 }
             });
 
-            // 자신과 충돌
-            for (let i = 40; i < player.segments.length; i += 5) {
-                if (Math.hypot(pHead.x - player.segments[i].x, pHead.y - player.segments[i].y) < player.baseRadius * 0.7) {
-                    endGame("자신의 몸에 부딪혔습니다!");
-                }
-            }
-
-            if (frameCount % 180 === 0 && enemies.length < 6) {
-                enemies.push(new Snake(Math.random() * canvas.width, Math.random() * canvas.height, `hsl(${Math.random() * 60}, 70%, 40%)`));
+            if (frameCount % 300 === 0 && enemies.length < 5) {
+                enemies.push(new Snake(Math.random() * canvas.width, Math.random() * canvas.height, "#ef4444"));
             }
 
             scoreElement.innerText = score;
@@ -262,11 +238,6 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             foods.forEach(f => { ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI*2); ctx.fillStyle = f.color; ctx.fill(); });
-            bombs.forEach(b => {
-                ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2);
-                ctx.fillStyle = (frameCount % 20 < 10) ? "#000" : "#ef4444";
-                ctx.fill(); ctx.strokeStyle = "white"; ctx.stroke();
-            });
             enemies.forEach(e => e.draw());
             player.draw();
         }
@@ -282,7 +253,6 @@
 
         initGame();
         update();
-        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
     </script>
 </body>
 </html>
