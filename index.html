@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WASD ?ㅻ꽕?댄겕: ?쎌쑁媛뺤떇 ?쒖뒪??/title>
+    <title>WASD 스네이크: 약육강식 시스템</title>
     <style>
         body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; overflow: hidden; font-family: 'Pretendard', sans-serif; color: white; }
         canvas { background-color: #1e293b; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
@@ -17,13 +17,13 @@
 <body>
     <div class="ui">
         <div class="score">Score: <span id="scoreVal">0</span></div>
-        <div class="info">WASD ?대룞 | ?섎낫???묒? 諭? 紐명넻???ㅼ씠諛쏆븘 癒뱀쓣 ???덉뒿?덈떎!</div>
+        <div class="info">WASD 이동 | 나보다 작은 뱀은 몸통을 들이받아 먹을 수 있습니다!</div>
     </div>
 
     <div id="gameOver">
         <h1 id="deathMsg">GAME OVER</h1>
-        <p>理쒖쥌 ?먯닔: <span id="finalScore">0</span></p>
-        <button onclick="resetGame()">?ㅼ떆 ?꾩쟾</button>
+        <p>최종 점수: <span id="finalScore">0</span></p>
+        <button onclick="resetGame()">다시 도전</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -50,7 +50,7 @@
                 this.segments = [];
                 this.angle = Math.random() * Math.PI * 2;
                 this.speed = isPlayer ? 5 : 2 + Math.random() * 3;
-                this.baseRadius = isPlayer ? 15 : 8 + Math.random() * 20; // ?ㅼ뼇???ш린????
+                this.baseRadius = isPlayer ? 15 : 8 + Math.random() * 20; // 다양한 크기의 적
                 this.length = isPlayer ? 15 : 10 + Math.random() * 20;
                 this.color = color;
                 this.turnSpeed = 0.08;
@@ -78,10 +78,10 @@
                     this.segments.pop();
                 }
 
-                // ?붾㈃ 寃쎄퀎 泥섎━
+                // 화면 경계 처리
                 if (this.isPlayer) {
                     if (nextX < 0 || nextX > canvas.width || nextY < 0 || nextY > canvas.height) {
-                        endGame("踰쎌뿉 遺?ろ삍?듬땲??");
+                        endGame("벽에 부딪혔습니다!");
                     }
                 } else {
                     if (nextX < -100) this.segments[0].x = canvas.width + 100;
@@ -143,14 +143,14 @@
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
         function checkCollision(head, targetSnake) {
-            // ?寃?諭??紐⑤뱺 留덈뵒? 異⑸룎 泥댄겕 (癒몃━遺??瑗щ━源뚯?)
+            // 타겟 뱀의 모든 마디와 충돌 체크 (머리부터 꼬리까지)
             for (let i = 0; i < targetSnake.length; i++) {
                 const segIndex = i * 3;
                 if (segIndex >= targetSnake.segments.length) continue;
                 const seg = targetSnake.segments[segIndex];
                 const dist = Math.hypot(head.x - seg.x, head.y - seg.y);
                 
-                // 留덈뵒??諛섏?由꾩쓣 怨좊젮??異⑸룎 ?먯젙
+                // 마디의 반지름을 고려한 충돌 판정
                 const targetRadius = targetSnake.baseRadius * (1 - (i / (targetSnake.length * 2)));
                 if (dist < player.baseRadius * 0.8 + targetRadius * 0.8) {
                     return true;
@@ -162,7 +162,7 @@
         function update() {
             if (!gameActive) return;
 
-            // 1. ?뚮젅?댁뼱 議곗옉
+            // 1. 플레이어 조작
             let targetAngle = player.angle;
             if (keys['w'] && keys['a']) targetAngle = -Math.PI * 0.75;
             else if (keys['w'] && keys['d']) targetAngle = -Math.PI * 0.25;
@@ -174,7 +174,7 @@
             else if (keys['d']) targetAngle = 0;
             player.update(targetAngle);
 
-            // 2. ??AI ?낅뜲?댄듃
+            // 2. 적 AI 업데이트
             enemies.forEach(enemy => {
                 if (Math.random() < 0.02) enemy.targetAngle = Math.random() * Math.PI * 2;
                 enemy.update(enemy.targetAngle);
@@ -182,37 +182,37 @@
 
             const pHead = player.segments[0];
 
-            // 3. ?뚮젅?댁뼱 vs ???곹샇?묒슜 (?꾩껜 紐명넻 泥댄겕)
+            // 3. 플레이어 vs 적 상호작용 (전체 몸통 체크)
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const enemy = enemies[i];
                 
-                // ?뚮젅?댁뼱 癒몃━媛 ?곸쓽 紐명넻 ?대뵒???우븯?붽??
+                // 플레이어 머리가 적의 몸통 어디든 닿았는가?
                 if (checkCollision(pHead, enemy)) {
                     if (player.baseRadius > enemy.baseRadius) {
-                        // ?뚮젅?댁뼱媛 ???щ㈃ ?곸쓣 癒뱀쓬
+                        // 플레이어가 더 크면 적을 먹음
                         score += Math.floor(enemy.baseRadius * 10);
                         player.length += enemy.length * 0.2;
                         player.baseRadius += 1;
                         enemies.splice(i, 1);
                         continue;
                     } else {
-                        // ?뚮젅?댁뼱媛 ???묒쑝硫??щ쭩
-                        endGame("??嫄곕????곸뿉寃?癒뱁삍?듬땲??");
+                        // 플레이어가 더 작으면 사망
+                        endGame("더 거대한 적에게 먹혔습니다!");
                         return;
                     }
                 }
 
-                // ?곸쓽 癒몃━媛 ?뚮젅?댁뼱??紐명넻 ?대뵒???우븯?붽??
+                // 적의 머리가 플레이어의 몸통 어디든 닿았는가?
                 const eHead = enemy.segments[0];
                 if (Math.hypot(eHead.x - pHead.x, eHead.y - pHead.y) < enemy.baseRadius + player.baseRadius) {
-                   // 癒몃━?쇰━ 遺?ろ엺 寃쎌슦???꾩뿉???대? 泥섎━??(checkCollision ?대???癒몃━ ?ы븿)
+                   // 머리끼리 부딪힌 경우는 위에서 이미 처리됨 (checkCollision 내부에 머리 포함)
                 } else {
-                    // ??癒몃━媛 ?뚮젅?댁뼱 紐명넻(癒몃━ ?쒖쇅)???우븯?붿? 泥댄겕
+                    // 적 머리가 플레이어 몸통(머리 제외)에 닿았는지 체크
                     for (let j = 5; j < player.segments.length; j += 5) {
                         const pSeg = player.segments[j];
                         if (Math.hypot(eHead.x - pSeg.x, eHead.y - pSeg.y) < enemy.baseRadius + player.baseRadius * 0.5) {
                             if (enemy.baseRadius > player.baseRadius) {
-                                endGame("?곸씠 ?뱀떊???녾뎄由щ? 怨듦꺽???≪븘癒뱀뿀?듬땲??");
+                                endGame("적이 당신의 옆구리를 공격해 잡아먹었습니다!");
                                 return;
                             } else {
                                 enemies.splice(i, 1);
@@ -224,7 +224,7 @@
                 }
             }
 
-            // 4. ?꾩씠??異⑸룎
+            // 4. 아이템 충돌
             foods.forEach((food, i) => {
                 if (Math.hypot(pHead.x - food.x, pHead.y - food.y) < player.baseRadius + food.radius) {
                     foods[i] = spawnItem('food');
@@ -242,10 +242,10 @@
                 }
             });
 
-            // ?먯떊怨?異⑸룎
+            // 자신과 충돌
             for (let i = 40; i < player.segments.length; i += 5) {
                 if (Math.hypot(pHead.x - player.segments[i].x, pHead.y - player.segments[i].y) < player.baseRadius * 0.7) {
-                    endGame("?먯떊??紐몄뿉 遺?ろ삍?듬땲??");
+                    endGame("자신의 몸에 부딪혔습니다!");
                 }
             }
 
